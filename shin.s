@@ -106,10 +106,8 @@ v_clswk:
 	cmp	#2+2+1,(a0)	; if peripheral number too high (> 2+max res)
 	bpl	mgde		; then it's not a standard screen mode
 	tst	(a0)		; if too low
-	ble	mgde		;no good either
+	ble	mgde		; no good either
 
-	bclr	#5,$fffffa07.w	; deactivate timer A
-	bclr	#5,$fffffa13.w	; mask timer A
 	bclr	#0,$fffffa07.w	; deactivate timer B
 	bclr	#0,$fffffa13.w	; mask timer B
 
@@ -144,8 +142,6 @@ post_opnwk:
 	lsr.w	#8,d0
 	move.l	d0,$ffff8200.w		; physical screen address
 
-	bset	#5,$fffffa07.w	; activate timer A
-	bset	#5,$fffffa13.w	; unmask timer A
 	bset	#0,$fffffa07.w	; activate timer B
 	bset	#0,$fffffa13.w	; unmask timer B
 
@@ -231,6 +227,3 @@ hello_txt:	dc.b	13,10
 hires_txt	dc.b	"unsupported video mode",13,10,0
 	even
 
-	section bss
-bss_start:
-screen:	ds.b	160*276+256
