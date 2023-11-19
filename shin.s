@@ -25,6 +25,17 @@ nops:	macro
 	endr
 	endm
 
+it_off:	macro
+	bclr.b	#6,$fffffa15.w		; mask keyboard interrupt
+	bclr.b	#5,$fffffa15.w		; mask Timer C (hz200) interrupt
+	endm
+
+it_on:	macro
+	bset.b	#6,$fffffa15.w		; unmask keyboard interrupt
+	bset.b	#5,$fffffa15.w		; unmask Timer C (hz200) interrupt
+	endm
+
+
 	section	text
 
 
@@ -40,9 +51,22 @@ vbl:
 	move.b	#4,$fffffa1b.w	; timer B - delay mode,divide by 50
 	move.l	#timer_b1,$120.w
 
+	and.b	#$f0,$fffffa1d.w	; Timer D stop
+	move.b	#88,$fffffa25.w	; timer D - set counter
+	or.b	#4,$fffffa1d.w	; timer D - delay mode,divide by 50
+	move	#$777,$ffff8240.w
+	it_on
+	clr.b	tb2cpt+1
+
+
 	move.l	oldvbl(pc),-(sp)
 	rts
 
+timer_d:
+	and.b	#$f0,$fffffa1d.w	; Timer D stop
+	it_off
+	bclr.b	#4,$fffffa11.w
+	rte
 
 timer_b1:
 	clr.b	$fffffa1b.w	; timer B - stop
@@ -58,6 +82,10 @@ timer_b1:
 	move.b	#0,$ffff820a.w
 	nops	9
 	move.b	#2,$ffff820a.w
+	move.b	#173,$fffffa25.w	; timer D - set counter
+	or.b	#7,$fffffa1d.w	; timer D - delay mode,divide by 200
+	it_on
+
 
 	bclr.b	#0,$fffffa0f.w
 hbl:	rte
@@ -78,6 +106,17 @@ tbwbc:
 	clr.b	$ffff820a.w
 	nops	6
 	move.b	#2,$ffff820a.w
+	it_on
+tb2cpt:	moveq	#0,d0
+	bne.s	tb2_dont_td
+	move.b	#58,$fffffa25.w	; timer D - set counter
+	or.b	#6,$fffffa1d.w	; timer D - delay mode,divide by 100
+	bra.s	tb2_do_td
+tb2_dont_td:
+	; this is line 308, close enough to next VBL
+	it_off
+tb2_do_td:
+	addq.b	#1,tb2cpt+1
 	movem.l	(sp)+,d0-d1
 
 	bclr.b	#0,$fffffa0f.w
@@ -110,6 +149,9 @@ v_clswk:
 
 	bclr	#0,$fffffa07.w	; deactivate timer B
 	bclr	#0,$fffffa13.w	; mask timer B
+
+	bclr	#4,$fffffa09.w	; disable Timer D
+	bclr	#4,$fffffa15.w	; mask Timer D
 
 	bra	mgde
 
@@ -144,6 +186,9 @@ post_opnwk:
 
 	bset	#0,$fffffa07.w	; activate timer B
 	bset	#0,$fffffa13.w	; unmask timer B
+
+	bset	#4,$fffffa09.w	; enable Timer D
+	bset	#4,$fffffa15.w	; unmask Timer D
 
 	dc.w	$a000
 
@@ -203,9 +248,15 @@ _is1:	move	#$2700,sr
 
 	clr.b	$fffffa1b.w	; timer B - stop
 
+	and.b	#$f0,$fffffa1d.w	; Timer D stop
+	move.l	#timer_d,$110.w	; Timer D vector
+	bclr	#4,$fffffa09.w	; disable Timer D
+	bclr	#4,$fffffa15.w	; mask Timer D
+
 	move.l	#hbl,$68.w
 	move.l	$70.w,oldvbl
 	move.l	#vbl,$70.w
+
 	move	#$2300,sr
 
 	move.l	$88.w,old_gem
