@@ -263,7 +263,6 @@ _is1:	move	#$2700,sr
 
 	move.l	$88.w,old_gem
 	move.l	#my_gem,$88.w	; AES/VDI (Trap #2) vector
-	moveq	#0,d0
 
 	move.l	$436.w,a0	; _memtop
 	move.l	a0,a3		; save old value
@@ -302,6 +301,7 @@ mdsearch_found:
 
 ; if not found (should not happen!), do nothing
 mdsearch_notfound:
+	moveq	#0,d0
 	rts
 
 cconws:
