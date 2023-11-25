@@ -271,6 +271,9 @@ _is1:	move	#$2700,sr
 	move.l	a0,$436.w
 
 ; Look for our program's MD (memory descriptor)
+; To our knowledge, there is no known standard way to find the MPB (Memory
+; Parameter Block) that has been initialised at boot.
+; Hence we directly search for our MD by scanning the system memory.
 	lea	begin-256(pc),a0	; basepage address
 	sub.l	a0,a3		; current block size value
 	lea	$2004.w,a1	; TOS internal variables
