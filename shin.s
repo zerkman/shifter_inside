@@ -16,6 +16,8 @@
 
 	opt	o+,p=68000
 
+ADDSCR:	equ	(276*160-200*160+254)&$ffff00	; additional screen size in bytes
+
 nops:	macro
 	rept	\1/2
 	or.l	d0,d0
@@ -178,7 +180,7 @@ post_opnwk:
 	move.w	#275,2(a1)	; max Y coord
 
 	move.l	$44e.w,d0		; logical screen base (_v_bas_ad)
-	sub.l	#(276*160-200*160+254)&$ffff00,d0	; corrected screen address
+	sub.l	#ADDSCR,d0		; corrected screen address
 	move.l	d0,$44e.w		; new logical screen base
 
 	lsr.w	#8,d0
@@ -262,6 +264,41 @@ _is1:	move	#$2700,sr
 	move.l	$88.w,old_gem
 	move.l	#my_gem,$88.w	; AES/VDI (Trap #2) vector
 	moveq	#0,d0
+
+	move.l	$436.w,a0	; _memtop
+	move.l	a0,a3		; save old value
+	sub.l	#ADDSCR,a0	; fix _memtop so it points before screen memory
+	move.l	a0,$436.w
+
+; Look for our program's MD (memory descriptor)
+	lea	begin-256(pc),a0	; basepage address
+	sub.l	a0,a3		; current block size value
+	lea	$2004.w,a1	; TOS internal variables
+	move.l	$432.w,a2	; _membot
+	sub.l	#12,a2		; remove size of MD
+mdsearch_lp:
+	cmp.l	(a1),a0		; Block address
+	bne.s	.cont
+	cmp.l	4(a1),a3	; Block size
+	beq.s	mdsearch_found
+.cont	addq.l	#2,a1
+	cmp.l	a2,a1
+	ble.s	mdsearch_lp
+	bra.s	mdsearch_notfound
+
+; Here we shrink the allocated buffer size for our program.
+; Since we are now using a larger video memory buffer, we need to inform the
+; system that a part of memory is not available anymore for allocation.
+; Our program's memory has been allocated by Malloc, and the normal system
+; behaviour is to allocate the largest available block of memory for any new
+; program. When the program quits, the memory block will become a free block,
+; so changing our program's memory descriptor will also affect the largest
+; free block after program termination.
+mdsearch_found:
+	sub.l	#ADDSCR,4(a1)	; Shrink block size
+
+; if not found (should not happen!), do nothing
+mdsearch_notfound:
 	rts
 
 cconws:
