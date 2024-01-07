@@ -1,6 +1,6 @@
 # Shifter Inside - remove top and bottom borders in GEM desktop
 
-Copyright (c) 2023 by François Galea (fgalea à free.fr)
+Copyright (c) 2023-2024 by François Galea (fgalea à free.fr)
 
 This is a program for the Atari ST/STe which uses classical demoscene-style
 top and bottom border removal techniques to extend the screen size of
